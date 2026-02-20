@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from polybot.config import config
@@ -24,29 +25,47 @@ def is_in_window(market: Dict[str, Any]) -> bool:
         logger.error(f"Error parsing date for market {market.get('id')}: {e}")
         return False
 
-def is_price_in_range(market: Dict[str, Any]) -> bool:
-    """Check if the current market price is within the target range."""
-    # Gamma API often provides prices in 'outcomePrices' or 'bestBid'/'bestAsk'
-    # For simplicity, we check if there are prices and if they meet the criteria
-    prices = market.get("outcomePrices")
-    if not prices or not isinstance(prices, list):
-        return False
+def get_prices(market: Dict[str, Any]) -> List[float]:
+    """Extract outcome prices from market object, handling both string and list formats."""
+    raw_prices = market.get("outcomePrices")
+    if not raw_prices:
+        return []
+    
+    # If it's a string (JSON encoded list), decode it
+    if isinstance(raw_prices, str):
+        try:
+            raw_prices = json.loads(raw_prices)
+        except json.JSONDecodeError:
+            return []
+            
+    if not isinstance(raw_prices, list):
+        return []
         
     try:
-        for price_str in prices:
-            price = float(price_str)
-            if config.PRICE_MIN <= price <= config.PRICE_MAX:
-                return True
-        return False
+        return [float(p) for p in raw_prices]
     except (ValueError, TypeError):
+        return []
+
+def is_price_in_range(market: Dict[str, Any]) -> bool:
+    """Check if the current market price is within the target range."""
+    prices = get_prices(market)
+    if not prices:
         return False
+        
+    for price in prices:
+        if config.PRICE_MIN <= price <= config.PRICE_MAX:
+            return True
+    return False
 
 def has_sufficient_volume(market: Dict[str, Any]) -> bool:
     """Check if the market has enough total and 24h volume."""
-    total_volume = float(market.get("volume", 0))
-    volume_24h = float(market.get("volume24hr", 0))
-    
-    return total_volume >= config.MIN_VOLUME_TOTAL and volume_24h >= config.MIN_VOLUME_24H
+    try:
+        # API returns numbers for volume, but handle potential strings just in case
+        total_volume = float(market.get("volume", 0) or 0)
+        volume_24h = float(market.get("volume24hr", 0) or 0)
+        return total_volume >= config.MIN_VOLUME_TOTAL and volume_24h >= config.MIN_VOLUME_24H
+    except (ValueError, TypeError):
+        return False
 
 def apply_filters(markets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Apply all filters to a list of markets."""

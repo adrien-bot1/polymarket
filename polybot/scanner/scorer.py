@@ -31,7 +31,7 @@ class PriceHistoryStore:
         except Exception as e:
             logger.error(f"Error saving price history: {e}")
 
-    def add_price(self, market_id: str, prices: List[str]):
+    def add_price(self, market_id: str, prices: List[float]):
         if market_id not in self.history:
             self.history[market_id] = []
         
@@ -51,9 +51,17 @@ def calculate_score(market: Dict[str, Any], history: List[Dict[str, Any]]) -> in
     """Calculate a score from 0-100 for a market."""
     score = 0
     
+    # Helper to get prices safely
+    from polybot.scanner.filter import get_prices
+    current_prices = get_prices(market)
+    
     # 1. Volume Score (up to 30 points)
-    total_vol = float(market.get("volume", 0))
-    vol_24h = float(market.get("volume24hr", 0))
+    try:
+        total_vol = float(market.get("volume", 0) or 0)
+        vol_24h = float(market.get("volume24hr", 0) or 0)
+    except (ValueError, TypeError):
+        total_vol = 0
+        vol_24h = 0
     
     if total_vol > 10000: score += 15
     elif total_vol > 5000: score += 10
@@ -62,9 +70,9 @@ def calculate_score(market: Dict[str, Any], history: List[Dict[str, Any]]) -> in
     elif vol_24h > 500: score += 10
     
     # 2. Price Trend Score (up to 40 points)
-    if len(history) >= 1:
+    if len(history) >= 1 and current_prices:
         try:
-            current_price = float(market.get("outcomePrices", ["0"])[0])
+            current_price = current_prices[0]
             old_price = float(history[0]["prices"][0])
             
             if old_price > 0:
@@ -95,6 +103,8 @@ def calculate_score(market: Dict[str, Any], history: List[Dict[str, Any]]) -> in
 def score_markets(markets: List[Dict[str, Any]], store: PriceHistoryStore) -> List[Dict[str, Any]]:
     """Score all filtered markets and update history."""
     scored_markets = []
+    from polybot.scanner.filter import get_prices
+    
     for market in markets:
         market_id = market.get("id", "unknown")
         history = store.get_history(market_id)
@@ -103,7 +113,7 @@ def score_markets(markets: List[Dict[str, Any]], store: PriceHistoryStore) -> Li
         market["score"] = score
         
         # Update history for next time
-        store.add_price(market_id, market.get("outcomePrices", []))
+        store.add_price(market_id, get_prices(market))
         
         if score >= config.MIN_SCORE:
             scored_markets.append(market)

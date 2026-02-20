@@ -68,14 +68,3 @@ async def fetch_all_active_markets(batch_size: int = 100) -> List[Dict[str, Any]
                 break
                 
     return all_markets
-
-if __name__ == "__main__":
-    # Simple standalone test
-    logging.basicConfig(level=logging.INFO)
-    async def test():
-        markets = await fetch_all_active_markets(batch_size=10)
-        print(f"Total markets fetched: {len(markets)}")
-        if markets:
-            print(f"Sample market: {markets[0].get('question', 'No question')}")
-            
-    asyncio.run(test())
