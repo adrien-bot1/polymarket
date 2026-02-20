@@ -3,7 +3,9 @@ import argparse
 import logging
 from polybot.config import config
 from polybot.display.banner import render_banner
-from polybot.scheduler.loop import run_scheduler
+from polybot.scheduler.loop import run_scheduler, run_scan
+from polybot.scanner.pipeline import ScanPipeline
+from polybot.notifier.telegram import TelegramNotifier
 
 def setup_logging():
     logging.basicConfig(
@@ -37,10 +39,12 @@ async def main(args):
     
     if args.once:
         logger.info("Running single scan...")
-        # TODO: Implement single scan logic
+        pipeline = ScanPipeline()
+        notifier = TelegramNotifier()
+        await run_scan(pipeline, notifier, dry_run=args.dry_run)
     else:
         logger.info("Starting scheduler loop...")
-        await run_scheduler(config)
+        await run_scheduler(config, dry_run=args.dry_run)
 
 if __name__ == "__main__":
     cli_entry()
