@@ -1,0 +1,40 @@
+[project]
+name = "polybot"
+version = "2026.1.24"
+description = "Polymarket Closing Window Scanner"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27,<0.28",           # Async HTTP client
+    "python-dotenv>=1.0,<2.0",     # .env file loading
+    "pyfiglet>=1.0,<2.0",          # ASCII art banner generation
+    "rich>=13,<14",                 # Terminal colors, progress bars, panels
+    "python-telegram-bot>=21,<22", # Telegram Bot API wrapper
+    "apscheduler>=3.10,<4.0",     # Job scheduler for 2-hour loop
+    "py-clob-client>=0.18",       # Official Polymarket CLOB SDK
+    "eth-account>=0.13,<1.0",     # Ethereum wallet/signing (EIP-712)
+    "web3>=7.0,<8.0",             # Polygon RPC interaction
+    "websockets>=13,<14",         # WebSocket feed for order book + fills
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",                # Testing framework
+    "pytest-asyncio>=0.23,<1.0",   # Async test support
+    "respx>=0.21,<1.0",            # HTTP mock library for tests
+    "ruff",                        # Linter + formatter
+]
+
+[project.scripts]
+polybot = "polybot.main:cli_entry"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
