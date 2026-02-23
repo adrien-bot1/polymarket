@@ -1,0 +1,16 @@
+name: Fetcher Stress Test
+on:
+  workflow_dispatch:
+jobs:
+  stress-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Run Stress Test
+        run: uv run python tests/stress_test_fetcher.py
